@@ -1,0 +1,68 @@
+= URL Rewriting policy
+
+ifdef::env-github[]
+image:https://ci.gravitee.io/buildStatus/icon?job=gravitee-io/gravitee-policy-url-rewriting/master["Build status", link="https://ci.gravitee.io/job/gravitee-io/job/gravitee-policy-url-rewriting/"]
+image:https://badges.gitter.im/Join Chat.svg["Gitter", link="https://gitter.im/gravitee-io/gravitee-io?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"]
+endif::[]
+
+== Phase
+
+[cols="^2,^2,^2,^2",options="header"]
+|===
+|onRequest|onResponse|onRequestContent|onResponseContent
+
+|-
+|X
+|-
+|X
+
+|===
+
+== Description
+
+URL Rewriting policy allows you to rewrite URLs from HTTP response headers and / or HTTP response body.
+
+== Usage
+
+== Configuration
+
+|===
+|Property |Required |Description |Type |Default
+
+.^|rewriteResponseHeaders
+^.^|X
+|Rewrite the value of HTTP response headers.
+^.^|boolean
+^.^|true
+
+.^|rewriteResponseBody
+^.^|X
+|Rewrite the HTTP response body.
+^.^|boolean
+^.^|true
+
+.^|fromRegex
+^.^|X
+|The regex pattern for matching URLs.
+^.^|string (regex)
+^.^|true
+
+.^|toReplacement
+^.^|X
+|The value used to replace matching URLs (support EL).
+^.^|string
+^.^|true
+
+|===
+
+[source, json]
+.Sample
+----
+"url-rewriting": {
+    "rewriteResponseHeaders": true,
+    "rewriteResponseBody": true,
+    "fromRegex": "https?://[^\/]*\/((.*|\/*))",
+    "toReplacement": "https://apis.gravitee.io/{#group[1]}"
+}
+
+

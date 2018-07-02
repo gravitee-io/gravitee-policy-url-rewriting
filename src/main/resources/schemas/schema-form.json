@@ -1,0 +1,32 @@
+{
+  "type" : "object",
+  "id" : "urn:jsonschema:io:gravitee:policy:urlrewriting:configuration:URLRewritingPolicyConfiguration",
+  "properties" : {
+    "rewriteResponseHeaders" : {
+      "title": "Rewrite HTTP response headers",
+      "description": "Rewrite the value of HTTP response headers.",
+      "type" : "boolean",
+      "default": true
+    },
+    "rewriteResponseBody" : {
+      "title": "Rewrite HTTP response body",
+      "description": "Rewrite the HTTP response body.",
+      "type" : "boolean",
+      "default": true
+    },
+    "fromRegex" : {
+      "title": "URL pattern expression",
+      "description": "The regex pattern for matching URLs.",
+      "type" : "string"
+    },
+    "toReplacement" : {
+      "title": "Replacement value",
+      "description": "The value used to replace matching URLs (support EL).",
+      "type" : "string"
+    }
+  },
+  "required": [
+    "fromRegex",
+    "toReplacement"
+  ]
+}
