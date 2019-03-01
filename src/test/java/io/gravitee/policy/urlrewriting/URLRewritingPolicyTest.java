@@ -16,12 +16,12 @@
 package io.gravitee.policy.urlrewriting;
 
 import io.gravitee.common.http.HttpHeaders;
+import io.gravitee.el.TemplateEngine;
 import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
 import io.gravitee.gateway.api.buffer.Buffer;
 import io.gravitee.gateway.api.stream.ReadWriteStream;
-import io.gravitee.gateway.el.SpelTemplateEngine;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.urlrewriting.configuration.URLRewritingPolicyConfiguration;
 import org.junit.Assert;
@@ -98,7 +98,7 @@ public class URLRewritingPolicyTest {
         when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
 
         // Prepare context
-        when(executionContext.getTemplateEngine()).thenReturn(new SpelTemplateEngine());
+        when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
 
         // Execute policy
         urlRewritingPolicy.onResponse(request, response, executionContext, policyChain);
@@ -120,7 +120,7 @@ public class URLRewritingPolicyTest {
         when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
 
         // Prepare context
-        when(executionContext.getTemplateEngine()).thenReturn(new SpelTemplateEngine());
+        when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
 
         // Execute policy
         ReadWriteStream stream = urlRewritingPolicy.onResponseContent(request, response, executionContext);
@@ -141,7 +141,7 @@ public class URLRewritingPolicyTest {
         when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
 
         // Prepare context
-        when(executionContext.getTemplateEngine()).thenReturn(new SpelTemplateEngine());
+        when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
 
         // Execute policy
         Buffer buffer = Buffer.buffer("{\"name\":1}");
@@ -165,7 +165,7 @@ public class URLRewritingPolicyTest {
         when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
 
         // Prepare context
-        when(executionContext.getTemplateEngine()).thenReturn(new SpelTemplateEngine());
+        when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
 
         // Execute policy
         Buffer buffer = Buffer.buffer("{\"link\":\"http://localhost:8082/mypath/toto\"}");
@@ -189,7 +189,7 @@ public class URLRewritingPolicyTest {
         when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
 
         // Prepare context
-        when(executionContext.getTemplateEngine()).thenReturn(new SpelTemplateEngine());
+        when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
 
         // Execute policy
         Buffer buffer = Buffer.buffer("{\"links\":[\"http://localhost:8082/mypath/toto\", \"http://localhost:8082/mypath/tata\"]}");
