@@ -29,7 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.HashMap;
 
@@ -68,9 +68,6 @@ public class URLRewritingPolicyTest {
     @Test
     public void test_shouldNotRewriteHeaders() {
         // Prepare
-        final HttpHeaders headers = new HttpHeaders();
-        when(response.headers()).thenReturn(headers);
-
         when(configuration.isRewriteResponseHeaders()).thenReturn(false);
 
         // Execute policy
@@ -111,16 +108,7 @@ public class URLRewritingPolicyTest {
     @Test
     public void test_rewriteResponse_disabled() {
         // Prepare
-        final HttpHeaders headers = new HttpHeaders();
-
-        when(response.headers()).thenReturn(headers);
-
         when(configuration.isRewriteResponseBody()).thenReturn(false);
-        when(configuration.getFromRegex()).thenReturn("https?://[^\\/]*\\/((.*|\\/*))");
-        when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
-
-        // Prepare context
-        when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
 
         // Execute policy
         ReadWriteStream stream = urlRewritingPolicy.onResponseContent(request, response, executionContext);
@@ -132,16 +120,8 @@ public class URLRewritingPolicyTest {
     @Test
     public void test_rewriteResponse_noRewriting() {
         // Prepare
-        final HttpHeaders headers = new HttpHeaders();
-
-        when(response.headers()).thenReturn(headers);
-
         when(configuration.isRewriteResponseBody()).thenReturn(true);
         when(configuration.getFromRegex()).thenReturn("https?://[^\\/]*\\/((.*|\\/*))");
-        when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
-
-        // Prepare context
-        when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
 
         // Execute policy
         Buffer buffer = Buffer.buffer("{\"name\":1}");
@@ -156,10 +136,6 @@ public class URLRewritingPolicyTest {
     @Test
     public void test_rewriteResponse_singleMatch() {
         // Prepare
-        final HttpHeaders headers = new HttpHeaders();
-
-        when(response.headers()).thenReturn(headers);
-
         when(configuration.isRewriteResponseBody()).thenReturn(true);
         when(configuration.getFromRegex()).thenReturn("https?://[^\\/]*\\/((.*|\\/*))");
         when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
@@ -180,10 +156,6 @@ public class URLRewritingPolicyTest {
     @Test
     public void test_rewriteResponse_multipleMatches() {
         // Prepare
-        final HttpHeaders headers = new HttpHeaders();
-
-        when(response.headers()).thenReturn(headers);
-
         when(configuration.isRewriteResponseBody()).thenReturn(true);
         when(configuration.getFromRegex()).thenReturn("https?:\\/\\/[^\\/]*\\/(([a-zA-Z\\/]*|\\/*))");
         when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
