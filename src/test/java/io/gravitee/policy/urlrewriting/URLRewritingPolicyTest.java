@@ -200,4 +200,24 @@ public class URLRewritingPolicyTest {
         // Check results
         Assert.assertNotNull(stream);
     }
+
+    @Test
+    public void shouldRewriteEmptyBody() {
+        // Prepare
+        final HttpHeaders headers = new HttpHeaders();
+        when(response.headers()).thenReturn(headers);
+        when(configuration.isRewriteResponseBody()).thenReturn(true);
+        when(configuration.getFromRegex()).thenReturn("https?://[^\\/]*\\/((.*|\\/*))");
+        when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
+
+        // Prepare context
+        when(executionContext.getTemplateEngine()).thenReturn(new SpelTemplateEngine());
+
+        // Execute policy
+        final ReadWriteStream stream = urlRewritingPolicy.onResponseContent(request, response, executionContext);
+        stream.end();
+
+        // Check results
+        Assert.assertNotNull(stream);
+    }
 }

@@ -109,7 +109,9 @@ public class URLRewritingPolicy {
 
                 @Override
                 public void end() {
-                    super.write(Buffer.buffer(rewrite(buffer.toString(), executionContext)));
+                    if (buffer != null) {
+                        super.write(Buffer.buffer(rewrite(buffer.toString(), executionContext)));
+                    }
                     super.end();
                 }
             };
