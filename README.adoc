@@ -64,5 +64,5 @@ URL Rewriting policy allows you to rewrite URLs from HTTP response headers and /
     "fromRegex": "https?://[^\/]*\/((.*|\/*))",
     "toReplacement": "https://apis.gravitee.io/{#group[1]}"
 }
-
+---
 
