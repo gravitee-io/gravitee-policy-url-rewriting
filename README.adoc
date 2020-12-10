@@ -1,4 +1,4 @@
-= URL Rewriting policy
+= URL rewriting policy
 
 ifdef::env-github[]
 image:https://ci.gravitee.io/buildStatus/icon?job=gravitee-io/gravitee-policy-url-rewriting/master["Build status", link="https://ci.gravitee.io/job/gravitee-io/job/gravitee-policy-url-rewriting/"]
@@ -20,9 +20,7 @@ endif::[]
 
 == Description
 
-URL Rewriting policy allows you to rewrite URLs from HTTP response headers and / or HTTP response body.
-
-== Usage
+You can use the `url-rewriting` policy to rewrite URLs from an HTTP response header or response body.
 
 == Configuration
 
@@ -31,32 +29,33 @@ URL Rewriting policy allows you to rewrite URLs from HTTP response headers and /
 
 .^|rewriteResponseHeaders
 ^.^|X
-|Rewrite the value of HTTP response headers.
+|Rewrite the value of HTTP response headers
 ^.^|boolean
 ^.^|true
 
 .^|rewriteResponseBody
 ^.^|X
-|Rewrite the HTTP response body.
+|Rewrite the HTTP response body
 ^.^|boolean
 ^.^|true
 
 .^|fromRegex
 ^.^|X
-|The regex pattern for matching URLs.
+|The regex pattern for matching URLs
 ^.^|string (regex)
 ^.^|true
 
 .^|toReplacement
 ^.^|X
-|The value used to replace matching URLs (support EL).
+|The value used to replace matching URLs (supports Expression Language)
 ^.^|string
 ^.^|true
 
 |===
 
+== Example
+
 [source, json]
-.Sample
 ----
 "url-rewriting": {
     "rewriteResponseHeaders": true,
@@ -65,4 +64,3 @@ URL Rewriting policy allows you to rewrite URLs from HTTP response headers and /
     "toReplacement": "https://apis.gravitee.io/{#group[1]}"
 }
 ----
-
