@@ -22,6 +22,10 @@ endif::[]
 
 You can use the `url-rewriting` policy to rewrite URLs from an HTTP response header or response body.
 
+=== Policy identifier
+
+You can enable or disable the policy with policy identifier `url-rewriting`.
+
 == Configuration
 
 |===
