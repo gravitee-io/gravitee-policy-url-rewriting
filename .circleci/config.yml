@@ -1,63 +1,332 @@
 version: 2.1
 
-parameters:
-  gio_action:
-    type: enum
-    enum: [release, pr_build]
-    default: pr_build
-  dry_run:
-    type: boolean
-    default: true
-    description: "Run in dry run mode?"
-  maven_profile_id:
-    type: string
-    default: "gravitee-dry-run"
-    description: "Maven ID of the Maven profile to use for a dry run ?"
-  secrethub_org:
-    type: string
-    default: "gravitee-lab"
-    description: "SecretHub Org to use to fetch secrets ?"
-  secrethub_repo:
-    type: string
-    default: "cicd"
-    description: "SecretHub Repo to use to fetch secrets ?"
-
 orbs:
-  gravitee: gravitee-io/gravitee@dev:1.0.4
+    gravitee: gravitee-io/gravitee@dev:1.0.45
+    secrethub: secrethub/cli@1.1
+    aws-s3: circleci/aws-s3@3.0
+
+parameters:
+    nexus_deploy:
+        type: boolean
+        default: false
+
+commands:
+    save-m2-cache:
+        description: "Save .m2 local repository, without gravitee artifacts"
+        steps:
+            - run:
+                  name: "Remove gravitee's artifacts"
+                  command: |
+                      rm -rf ~/.m2/repository/com/graviteesource
+                      rm -rf ~/.m2/repository/io/gravitee
+            - save_cache:
+                  paths:
+                      - ~/.m2
+                  key: m2-local-repository
+                  when: always
+    restore-maven-cache:
+        description: "Restore Maven cache"
+        steps:
+            - restore_cache:
+                  keys:
+                      - maven-{{ .Branch }}-{{ checksum "pom.xml" }}
+                      - m2-local-repository
+
+    prepare-gpg:
+        description: "Prepare GPG command"
+        steps:
+            - secrethub/exec:
+                  command: |
+                      echo "-----BEGIN PGP PUBLIC KEY BLOCK-----\n$(echo ${GIO_GPG_PUB_KEY:36:-33} | tr ' ' '\n' )-----END PGP PUBLIC KEY BLOCK----- | gpg --import
+                      echo "-----BEGIN PGP PRIVATE KEY BLOCK-----\n$(echo ${GIO_GPG_PRV_KEY:37:-34} | tr ' ' '\n' )-----END PGP PRIVATE KEY BLOCK----- | gpg --import
+
+jobs:
+    load-snapshot-configuration:
+        docker:
+            - image: cimg/base:stable
+        resource_class: small
+        environment:
+            ARTFACTORY_MAVEN_SETTINGS: 'secrethub://graviteeio/cicd/graviteebot/infra/maven/dry-run/artifactory/settings.dev.xml'
+            NEXUS_MAVEN_SETTINGS: 'secrethub://graviteeio/cicd/graviteebot/infra/maven/settings.dev.nexus.xml'
+        steps:
+            - secrethub/exec:
+                  command: |
+                      mkdir -p /tmp/configuration
+                      echo $ARTFACTORY_MAVEN_SETTINGS > /tmp/configuration/.artifactory.settings.xml
+                      echo $NEXUS_MAVEN_SETTINGS > /tmp/configuration/.nexus.settings.xml
+            - persist_to_workspace:
+                  root: /tmp/configuration
+                  paths:
+                      - .artifactory.settings.xml
+                      - .nexus.settings.xml
+
+    load-release-configuration:
+        docker:
+            - image: cimg/base:stable
+        resource_class: small
+        environment:
+            RELEASE_MAVEN_SETTINGS: 'secrethub://graviteeio/cicd/graviteebot/infra/maven/dry-run/artifactory/settings.non.dry.run.xml'
+            NEXUS_STAGING_MAVEN_SETTINGS: 'secrethub://graviteeio/cicd/graviteebot/infra/maven/deploy.settings.nexus.xml'
+            GRAVITEEBOT_ARTIFACTORY_USER: 'secrethub://graviteeio/cicd/graviteebot/infra/maven/dry-run/artifactory/user-name'
+            GRAVITEEBOT_ARTIFACTORY_PWD: 'secrethub://graviteeio/cicd/graviteebot/infra/maven/dry-run/artifactory/user-pwd'
+        steps:
+            - secrethub/exec:
+                  command: |
+                      mkdir -p /tmp/configuration
+                      echo $RELEASE_MAVEN_SETTINGS > /tmp/configuration/.artifactory.settings.xml
+                      echo $NEXUS_STAGING_MAVEN_SETTINGS > /tmp/configuration/.nexus.settings.xml
+                      echo $GRAVITEEBOT_ARTIFACTORY_USER > /tmp/configuration/artifactory.username
+                      echo $GRAVITEEBOT_ARTIFACTORY_PWD > /tmp/configuration/artifactory.pwd
+
+            - persist_to_workspace:
+                  root: /tmp/configuration
+                  paths:
+                      - .
+
+    build:
+        docker:
+            - image: cimg/openjdk:11.0
+        resource_class: medium
+
+        steps:
+            - checkout
+            - attach_workspace:
+                  at: .
+            - restore-maven-cache
+            - run:
+                  name: "Build project"
+                  command: |
+                      mvn -s .artifactory.settings.xml clean package --no-transfer-progress -DskipTests
+            - save_cache:
+                  paths:
+                      - ~/.m2
+                  key: maven-{{ .Branch }}-{{ checksum "pom.xml" }}
+                  when: always
+            - save-m2-cache
+            - persist_to_workspace:
+                  root: ./
+                  paths:
+                      - target/*
+
+    test:
+        docker:
+            - image: cimg/openjdk:11.0
+        resource_class: medium
+        steps:
+            - checkout
+            - attach_workspace:
+                  at: .
+            - restore-maven-cache
+            - run:
+                  name: "Test project"
+                  command: |
+                      mvn -s .artifactory.settings.xml test --no-transfer-progress
+            - save-m2-cache
+            - run:
+                  name: Save test results
+                  command: |
+                      mkdir -p ~/test-results/junit/
+                      find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/test-results/junit/ \;
+                  when: always
+            - store_test_results:
+                  path: ~/test-results
+
+    publish-on-artifactory:
+        docker:
+            - image: cimg/openjdk:11.0
+        resource_class: medium
+        environment:
+            GIO_GPG_PUB_KEY: 'secrethub://graviteeio/cicd/graviteebot/gpg/armor_format_pub_key'
+            GIO_GPG_PRV_KEY: 'secrethub://graviteeio/cicd/graviteebot/gpg/armor_format_private_key'
+        steps:
+            - checkout
+            - attach_workspace:
+                  at: .
+            - restore-maven-cache
+            - when:
+                  condition: << pipeline.git.tag >>
+                  steps:
+                      - prepare-gpg
+            - run:
+                  name: Maven deploy to Artifactory
+                  command: |
+                      mvn -s .artifactory.settings.xml deploy --no-transfer-progress -DskipTests  -P gio-dev
+            - save-m2-cache
+
+    publish-on-nexus:
+        docker:
+            - image: cimg/openjdk:11.0
+        resource_class: medium
+        environment:
+            NEXUS_SNAPSHOTS_URL: 'https://oss.sonatype.org/content/repositories/snapshots'
+            NEXUS_SNAPSHOTS_SERVER_ID: 'sonatype-nexus-snapshots'
+        parameters:
+            nexus_deploy:
+                type: boolean
+                default: false
+        steps:
+            - when:
+                  condition: << parameters.nexus_deploy >>
+                  steps:
+                      - checkout
+                      - attach_workspace:
+                            at: .
+                      - restore-maven-cache
+                      - run:
+                            name: Maven deploy to Nexus Snapshots
+                            command: |
+                                mvn -s .nexus.settings.xml deploy --no-transfer-progress -DskipTests -DaltDeploymentRepository=${NEXUS_SNAPSHOTS_SERVER_ID}::default::${NEXUS_SNAPSHOTS_URL}
+                      - save-m2-cache
+            - when:
+                  condition:
+                      not: << parameters.nexus_deploy >>
+                  steps:
+                      - run: echo "Nexus deployment is not required"
+            - run: exit 0
+
+    publish-on-download-site:
+        parameters:
+            artefact-type:
+                type: string
+                description: the type of artefact to publish on s3 (jar, zip, etc...). Default is zip.
+                default: zip
+            publish-folder-path:
+                type: string
+        docker:
+            - image: cimg/base:stable
+        resource_class: small
+        steps:
+            - attach_workspace:
+                  at: .
+            - run:
+                  name: prepare artefacts to upload
+                  command: |
+                      for pathToArtefactFile in $(find target -name \*.<< parameters.artefact-type >>); do
+                        artefactFile=${pathToArtefactFile##*/}                                                    #e.g. folder/subfolder/target/gravitee-my-project-1.14.0.zip => gravitee-my-project-1.14.0.zip
+                        artefactFolder=folder_to_sync/<< parameters.publish-folder-path >>/${artefactFile%-*p}    #e.g. gravitee-my-project-1.14.0.zip => gravitee-my-project
+                      
+                        mkdir -p $artefactFolder
+                        cp $pathToArtefactFile $artefactFolder/
+                      
+                        md5sum $artefactFolder/$artefactFile > $artefactFolder/$artefactFile.md5
+                        sha512sum $artefactFolder/$artefactFile > $artefactFolder/$artefactFile.sha512sum
+                        sha1sum $artefactFolder/$artefactFile > $artefactFolder/$artefactFile.sha1
+                      
+                      done
+            - aws-s3/sync:
+                  arguments: |
+                      --endpoint-url https://cellar-c2.services.clever-cloud.com \
+                      --acl public-read
+                  from: folder_to_sync
+                  to: 's3://gravitee-dry-releases-downloads/'
+
+Master_and_support_branches: &master_support_branches_filters
+    filters:
+        branches:
+            only:
+                - master
+                - /^[0-9]+\.[0-9]+\.x$/
+        tags:
+            ignore:
+                - /.*/
+
+All_except_master_and_support_branches: &all_except_master_and_support_branches
+    filters:
+        branches:
+            ignore:
+                - master
+                - /^[0-9]+\.[0-9]+\.x$/
+        tags:
+            ignore:
+                - /.*/
+
+Tag_build: &tag_build
+    filters:
+        branches:
+            ignore:
+                - /.*/
+        tags:
+            only:
+                - /^[0-9]+\.[0-9]+\.[0-9]+$/
 
 workflows:
-  version: 2.1
-  pull_requests:
-    when:
-      equal: [ pr_build, << pipeline.parameters.gio_action >> ]
-    jobs:
-      - gravitee/pr-build:
-          context: cicd-orchestrator
-  release:
-    # see https://circleci.com/docs/2.0/configuration-reference/#logic-statement-examples
-    when:
-      and:
-        - equal: [ release, << pipeline.parameters.gio_action >> ]
-        - not: << pipeline.parameters.dry_run >>
-    jobs:
-      # return to simple definition :
-      - gravitee/release:
-          context: cicd-orchestrator
-          dry_run: << pipeline.parameters.dry_run >>
-          secrethub_org: << pipeline.parameters.secrethub_org >>
-          secrethub_repo: << pipeline.parameters.secrethub_repo >>
-          maven_profile_id: << pipeline.parameters.maven_profile_id >>
-  release_dry_run:
-    # see https://circleci.com/docs/2.0/configuration-reference/#logic-statement-examples
-    when:
-      and:
-        - equal: [ release, << pipeline.parameters.gio_action >> ]
-        - << pipeline.parameters.dry_run >>
-    jobs:
-      # return to simple definition :
-      - gravitee/release:
-          context: cicd-orchestrator
-          dry_run: << pipeline.parameters.dry_run >>
-          secrethub_org: << pipeline.parameters.secrethub_org >>
-          secrethub_repo: << pipeline.parameters.secrethub_repo >>
-          maven_profile_id: << pipeline.parameters.maven_profile_id >>
+    build:
+        when:
+            not: << pipeline.git.tag >>
+        jobs:
+            - load-snapshot-configuration:
+                  context: cicd-orchestrator
+            - gravitee/lint-commits:
+                  name: Lint commits
+            - build:
+                  requires:
+                      - load-snapshot-configuration
+                      - Lint commits
+            - test:
+                  requires:
+                      - build
+            - gravitee/semantic-release:
+                  <<: *master_support_branches_filters
+                  name: Semantic Release
+                  requires:
+                      - test
+                  pre-steps:
+                      - secrethub/env-export:
+                            secret-path: graviteeio/cicd/graviteebot/github_personal_access_token
+                            var-name: GITHUB_TOKEN
+                      - secrethub/env-export:
+                            secret-path: graviteeio/cicd/graviteebot/git/user/name
+                            var-name: GIT_AUTHOR_NAME
+                      - secrethub/env-export:
+                            secret-path: graviteeio/cicd/graviteebot/git/user/email
+                            var-name: GIT_AUTHOR_EMAIL
+                      - secrethub/env-export:
+                            secret-path: graviteeio/cicd/graviteebot/git/user/name
+                            var-name: GIT_COMMITTER_NAME
+                      - secrethub/env-export:
+                            secret-path: graviteeio/cicd/graviteebot/git/user/email
+                            var-name: GIT_COMMITTER_EMAIL
+                  context: gravitee-qa
+            - publish-on-artifactory:
+                  <<: *all_except_master_and_support_branches
+                  name: Update POM version and publish on Artifactory
+                  requires:
+                      - test
+
+    build_release:
+        when:
+            matches:
+                pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+                value: << pipeline.git.tag >>
+        jobs:
+            - load-release-configuration:
+                  <<: *tag_build
+                  context: cicd-orchestrator
+            - build:
+                  <<: *tag_build
+                  requires:
+                      - load-release-configuration
+            - publish-on-artifactory:
+                  <<: *tag_build
+                  name: Publish Release <<pipeline.git.tag>> on Artifactory
+                  requires:
+                      - build
+            - publish-on-nexus:
+                  <<: *tag_build
+                  name: Publish Release <<pipeline.git.tag>> on Nexus
+                  requires:
+                      - build
+            - publish-on-download-site:
+                  <<: *tag_build
+                  name: Publish Release <<pipeline.git.tag>> on download.gravitee.io
+                  pre-steps:
+                      - secrethub/env-export:
+                            secret-path: graviteeio/cicd/graviteebot/infra/zip-bundle-server/clever-cloud-s3/s3cmd/aws_access_key
+                            var-name: AWS_ACCESS_KEY_ID
+                      - secrethub/env-export:
+                            secret-path: graviteeio/cicd/graviteebot/infra/zip-bundle-server/clever-cloud-s3/s3cmd/aws_secret_key
+                            var-name: AWS_SECRET_ACCESS_KEY
+                  publish-folder-path: graviteeio-apim/plugins/policies
+                  requires:
+                      - build
+
