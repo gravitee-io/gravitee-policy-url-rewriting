@@ -15,12 +15,13 @@
  */
 package io.gravitee.policy.urlrewriting;
 
-import io.gravitee.common.http.HttpHeaders;
 import io.gravitee.el.TemplateEngine;
 import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
 import io.gravitee.gateway.api.buffer.Buffer;
+import io.gravitee.gateway.api.http.HttpHeaderNames;
+import io.gravitee.gateway.api.http.HttpHeaders;
 import io.gravitee.gateway.api.stream.ReadWriteStream;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.urlrewriting.configuration.URLRewritingPolicyConfiguration;
@@ -30,8 +31,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-
-import java.util.HashMap;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
@@ -81,12 +80,9 @@ public class URLRewritingPolicyTest {
     @Test
     public void test_rewriteHeaders() {
         // Prepare
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setAll(new HashMap<String, String>() {
-            {
-                put(HttpHeaders.LOCATION, "https://localgateway/mypath");
-            }
-        });
+        final HttpHeaders headers = HttpHeaders
+                .create()
+                .set(HttpHeaderNames.LOCATION, "https://localgateway/mypath");
 
         when(response.headers()).thenReturn(headers);
 
@@ -101,7 +97,7 @@ public class URLRewritingPolicyTest {
         urlRewritingPolicy.onResponse(request, response, executionContext, policyChain);
 
         // Check results
-        Assert.assertEquals("https://apis.gravitee.io/mypath", response.headers().getFirst(HttpHeaders.LOCATION));
+        Assert.assertEquals("https://apis.gravitee.io/mypath", response.headers().get(HttpHeaderNames.LOCATION));
         verify(policyChain).doNext(any(Request.class), any(Response.class));
     }
 
