@@ -15,12 +15,13 @@
  */
 package io.gravitee.policy.urlrewriting;
 
-import io.gravitee.common.http.HttpHeaders;
 import io.gravitee.common.http.HttpHeadersValues;
 import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
 import io.gravitee.gateway.api.buffer.Buffer;
+import io.gravitee.gateway.api.http.HttpHeaderNames;
+import io.gravitee.gateway.api.http.HttpHeaders;
 import io.gravitee.gateway.api.stream.BufferedReadWriteStream;
 import io.gravitee.gateway.api.stream.ReadWriteStream;
 import io.gravitee.gateway.api.stream.SimpleReadWriteStream;
@@ -73,8 +74,8 @@ public class URLRewritingPolicy {
         }
 
         if (configuration.isRewriteResponseBody()) {
-            response.headers().remove(HttpHeaders.CONTENT_LENGTH);
-            response.headers().set(HttpHeaders.TRANSFER_ENCODING, HttpHeadersValues.TRANSFER_ENCODING_CHUNKED);
+            response.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+            response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeadersValues.TRANSFER_ENCODING_CHUNKED);
         }
 
         policyChain.doNext(request, response);
@@ -83,12 +84,7 @@ public class URLRewritingPolicy {
     private void rewriteHeaders(HttpHeaders headers, ExecutionContext executionContext) {
         LOGGER.debug("Rewrite HTTP response headers");
 
-        headers.forEach((headerName, headerValues) -> headers.put(
-                headerName,
-                headerValues
-                        .stream()
-                        .map(headerValue -> rewrite(headerValue, executionContext))
-                        .collect(Collectors.toList())));
+        headers.names().forEach(header -> headers.set(header, rewrite(headers.get(header), executionContext)));
     }
 
     @OnResponseContent
