@@ -15,6 +15,9 @@
  */
 package io.gravitee.policy.urlrewriting;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
+
 import io.gravitee.el.TemplateEngine;
 import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
@@ -31,9 +34,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
@@ -80,9 +80,7 @@ public class URLRewritingPolicyTest {
     @Test
     public void test_rewriteHeaders() {
         // Prepare
-        final HttpHeaders headers = HttpHeaders
-                .create()
-                .set(HttpHeaderNames.LOCATION, "https://localgateway/mypath");
+        final HttpHeaders headers = HttpHeaders.create().set(HttpHeaderNames.LOCATION, "https://localgateway/mypath");
 
         when(response.headers()).thenReturn(headers);
 
