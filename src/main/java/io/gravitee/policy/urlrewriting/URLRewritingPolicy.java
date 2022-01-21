@@ -29,15 +29,14 @@ import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.annotations.OnResponse;
 import io.gravitee.policy.api.annotations.OnResponseContent;
 import io.gravitee.policy.urlrewriting.configuration.URLRewritingPolicyConfiguration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Rewrites URL in the <code>Location</code>, <code>Content-Location</code> headers on HTTP
@@ -54,12 +53,12 @@ public class URLRewritingPolicy {
     /**
      * LOGGER
      */
-    private final static Logger LOGGER = LoggerFactory.getLogger(URLRewritingPolicy.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(URLRewritingPolicy.class);
 
-    private final static Pattern GROUP_NAME_PATTERN = Pattern.compile("\\(\\?<([a-zA-Z][a-zA-Z0-9]*)>");
+    private static final Pattern GROUP_NAME_PATTERN = Pattern.compile("\\(\\?<([a-zA-Z][a-zA-Z0-9]*)>");
 
-    private final static String GROUP_ATTRIBUTE = "group";
-    private final static String GROUP_NAME_ATTRIBUTE = "groupName";
+    private static final String GROUP_ATTRIBUTE = "group";
+    private static final String GROUP_NAME_ATTRIBUTE = "groupName";
 
     private URLRewritingPolicyConfiguration configuration;
 
@@ -120,7 +119,7 @@ public class URLRewritingPolicy {
     private String rewrite(String value, ExecutionContext executionContext) {
         StringBuilder sb = new StringBuilder();
 
-        if (value != null && ! value.isEmpty()) {
+        if (value != null && !value.isEmpty()) {
             // Compile pattern
             Pattern pattern = Pattern.compile(configuration.getFromRegex());
 
@@ -143,8 +142,9 @@ public class URLRewritingPolicy {
 
                     // Extract capture group by name
                     Set<String> extractedGroupNames = getNamedGroupCandidates(pattern.pattern());
-                    Map<String, String> groupNames = extractedGroupNames.stream().collect(
-                            Collectors.toMap(groupName -> groupName, matcher::group));
+                    Map<String, String> groupNames = extractedGroupNames
+                        .stream()
+                        .collect(Collectors.toMap(groupName -> groupName, matcher::group));
                     executionContext.getTemplateEngine().getTemplateContext().setVariable(GROUP_NAME_ATTRIBUTE, groupNames);
 
                     // Transform according to EL engine
