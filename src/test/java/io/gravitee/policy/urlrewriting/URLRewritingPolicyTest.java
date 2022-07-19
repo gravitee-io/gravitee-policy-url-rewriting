@@ -28,21 +28,22 @@ import io.gravitee.gateway.api.http.HttpHeaders;
 import io.gravitee.gateway.api.stream.ReadWriteStream;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.urlrewriting.configuration.URLRewritingPolicyConfiguration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import io.gravitee.policy.v3.URLRewritingPolicyV3;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
  * @author GraviteeSource Team
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class URLRewritingPolicyTest {
 
-    private URLRewritingPolicy urlRewritingPolicy;
+    private URLRewritingPolicyV3 urlRewritingPolicy;
 
     @Mock
     private Request request;
@@ -59,9 +60,9 @@ public class URLRewritingPolicyTest {
     @Mock
     private URLRewritingPolicyConfiguration configuration;
 
-    @Before
+    @BeforeEach
     public void init() {
-        urlRewritingPolicy = new URLRewritingPolicy(configuration);
+        urlRewritingPolicy = new URLRewritingPolicyV3(configuration);
     }
 
     @Test
@@ -95,7 +96,7 @@ public class URLRewritingPolicyTest {
         urlRewritingPolicy.onResponse(request, response, executionContext, policyChain);
 
         // Check results
-        Assert.assertEquals("https://apis.gravitee.io/mypath", response.headers().get(HttpHeaderNames.LOCATION));
+        Assertions.assertEquals("https://apis.gravitee.io/mypath", response.headers().get(HttpHeaderNames.LOCATION));
         verify(policyChain).doNext(any(Request.class), any(Response.class));
     }
 
@@ -108,7 +109,7 @@ public class URLRewritingPolicyTest {
         ReadWriteStream stream = urlRewritingPolicy.onResponseContent(request, response, executionContext);
 
         // Check results
-        Assert.assertNull(stream);
+        Assertions.assertNull(stream);
     }
 
     @Test
@@ -124,7 +125,7 @@ public class URLRewritingPolicyTest {
         stream.end();
 
         // Check results
-        Assert.assertNotNull(stream);
+        Assertions.assertNotNull(stream);
     }
 
     @Test
@@ -144,7 +145,7 @@ public class URLRewritingPolicyTest {
         stream.end();
 
         // Check results
-        Assert.assertNotNull(stream);
+        Assertions.assertNotNull(stream);
     }
 
     @Test
@@ -164,7 +165,7 @@ public class URLRewritingPolicyTest {
         stream.end();
 
         // Check results
-        Assert.assertNotNull(stream);
+        Assertions.assertNotNull(stream);
     }
 
     @Test
@@ -177,6 +178,6 @@ public class URLRewritingPolicyTest {
         stream.end();
 
         // Check results
-        Assert.assertNotNull(stream);
+        Assertions.assertNotNull(stream);
     }
 }

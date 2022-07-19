@@ -16,27 +16,22 @@
 package io.gravitee.policy.urlrewriting;
 
 import io.gravitee.common.http.HttpHeadersValues;
-import io.gravitee.gateway.api.ExecutionContext;
-import io.gravitee.gateway.api.Request;
-import io.gravitee.gateway.api.Response;
+import io.gravitee.el.TemplateContext;
+import io.gravitee.el.TemplateEngine;
 import io.gravitee.gateway.api.buffer.Buffer;
 import io.gravitee.gateway.api.http.HttpHeaderNames;
 import io.gravitee.gateway.api.http.HttpHeaders;
-import io.gravitee.gateway.api.stream.BufferedReadWriteStream;
-import io.gravitee.gateway.api.stream.ReadWriteStream;
-import io.gravitee.gateway.api.stream.SimpleReadWriteStream;
-import io.gravitee.policy.api.PolicyChain;
-import io.gravitee.policy.api.annotations.OnResponse;
-import io.gravitee.policy.api.annotations.OnResponseContent;
+import io.gravitee.gateway.jupiter.api.context.RequestExecutionContext;
+import io.gravitee.gateway.jupiter.api.policy.Policy;
 import io.gravitee.policy.urlrewriting.configuration.URLRewritingPolicyConfiguration;
+import io.gravitee.policy.v3.URLRewritingPolicyV3;
+import io.reactivex.Completable;
+import io.reactivex.Maybe;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Rewrites URL in the <code>Location</code>, <code>Content-Location</code> headers on HTTP
@@ -48,89 +43,73 @@ import org.slf4j.LoggerFactory;
  * @author David BRASSELY (david.brassely at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class URLRewritingPolicy {
+public class URLRewritingPolicy extends URLRewritingPolicyV3 implements Policy {
 
-    /**
-     * LOGGER
-     */
-    private static final Logger LOGGER = LoggerFactory.getLogger(URLRewritingPolicy.class);
-
-    private static final Pattern GROUP_NAME_PATTERN = Pattern.compile("\\(\\?<([a-zA-Z][a-zA-Z0-9]*)>");
-
-    private static final String GROUP_ATTRIBUTE = "group";
-    private static final String GROUP_NAME_ATTRIBUTE = "groupName";
-
-    private URLRewritingPolicyConfiguration configuration;
+    private Pattern fromRegexPattern;
+    private Set<String> extractedGroupNames;
 
     public URLRewritingPolicy(final URLRewritingPolicyConfiguration configuration) {
-        this.configuration = configuration;
+        super(configuration);
     }
 
-    @OnResponse
-    public void onResponse(Request request, Response response, ExecutionContext executionContext, PolicyChain policyChain) {
-        if (configuration.isRewriteResponseHeaders()) {
-            rewriteHeaders(response.headers(), executionContext);
-        }
-
-        if (configuration.isRewriteResponseBody()) {
-            response.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
-            response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeadersValues.TRANSFER_ENCODING_CHUNKED);
-        }
-
-        policyChain.doNext(request, response);
+    @Override
+    public String id() {
+        return "url-rewriting";
     }
 
-    private void rewriteHeaders(HttpHeaders headers, ExecutionContext executionContext) {
-        LOGGER.debug("Rewrite HTTP response headers");
+    @Override
+    public Completable onResponse(RequestExecutionContext ctx) {
+        return Completable.defer(() -> {
+            if (configuration.isRewriteResponseHeaders()) {
+                rewriteHeaders(ctx);
+            }
 
-        headers.names().forEach(header -> headers.set(header, rewrite(headers.get(header), executionContext)));
+            if (configuration.isRewriteResponseBody()) {
+                final HttpHeaders headers = ctx.response().headers();
+                headers.remove(HttpHeaderNames.CONTENT_LENGTH);
+                headers.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeadersValues.TRANSFER_ENCODING_CHUNKED);
+
+                return ctx.response().onBody(upstream -> upstream.map(buffer -> rewrite(buffer, ctx)));
+            }
+
+            return Completable.complete();
+        });
     }
 
-    @OnResponseContent
-    public ReadWriteStream onResponseContent(Request request, Response response, ExecutionContext executionContext) {
-        if (configuration.isRewriteResponseBody()) {
-            return new BufferedReadWriteStream() {
-                private Buffer buffer;
+    private Buffer rewrite(Buffer buffer, RequestExecutionContext ctx) {
+        return Buffer.buffer(rewrite(buffer.toString(), ctx));
+    }
 
-                @Override
-                public SimpleReadWriteStream<Buffer> write(Buffer content) {
-                    if (buffer == null) {
-                        buffer = Buffer.buffer();
-                    }
+    private void rewriteHeaders(RequestExecutionContext ctx) {
+        final HttpHeaders headers = ctx.response().headers();
+        headers.names().forEach(header -> headers.set(header, rewrite(headers.get(header), ctx)));
+    }
 
-                    buffer.appendBuffer(content);
-                    return this;
-                }
+    private Maybe<String> rewriteRx(String value, RequestExecutionContext ctx) {
+        if (value != null && !value.isEmpty()) {
+            // Apply regex capture / replacement
+            final Matcher matcher = fromRegexPattern.matcher(value);
 
-                @Override
-                public void end() {
-                    if (buffer != null) {
-                        super.write(Buffer.buffer(rewrite(buffer.toString(), executionContext)));
-                    }
-                    super.end();
-                }
-            };
+            if (!matcher.find()) {
+                return Maybe.just(value);
+            }
         }
 
-        // Nothing to apply, return null. This policy will not be added to the stream chain.
         return null;
     }
 
-    private String rewrite(String value, ExecutionContext executionContext) {
+    private String rewrite(String value, RequestExecutionContext ctx) {
         StringBuilder sb = new StringBuilder();
 
         if (value != null && !value.isEmpty()) {
-            // Compile pattern
-            Pattern pattern = Pattern.compile(configuration.getFromRegex());
-
             // Apply regex capture / replacement
-            Matcher matcher = pattern.matcher(value);
+            final Matcher matcher = getFromRegexPattern().matcher(value);
             int start = 0;
 
             boolean result = matcher.find();
             if (result) {
                 do {
-                    sb.append(value.substring(start, matcher.start()));
+                    sb.append(value, start, matcher.start());
 
                     final String[] groups = new String[matcher.groupCount()];
 
@@ -138,24 +117,26 @@ public class URLRewritingPolicy {
                         groups[idx] = matcher.group(idx + 1);
                     }
 
-                    executionContext.getTemplateEngine().getTemplateContext().setVariable(GROUP_ATTRIBUTE, groups);
+                    final TemplateEngine templateEngine = ctx.getTemplateEngine();
+                    final TemplateContext templateContext = templateEngine.getTemplateContext();
+
+                    templateContext.setVariable(GROUP_ATTRIBUTE, groups);
 
                     // Extract capture group by name
-                    Set<String> extractedGroupNames = getNamedGroupCandidates(pattern.pattern());
-                    Map<String, String> groupNames = extractedGroupNames
+                    Map<String, String> groupNames = getExtractedGroupNames()
                         .stream()
                         .collect(Collectors.toMap(groupName -> groupName, matcher::group));
-                    executionContext.getTemplateEngine().getTemplateContext().setVariable(GROUP_NAME_ATTRIBUTE, groupNames);
+                    templateContext.setVariable(GROUP_NAME_ATTRIBUTE, groupNames);
 
                     // Transform according to EL engine
-                    sb.append(executionContext.getTemplateEngine().convert(configuration.getToReplacement()));
+                    sb.append(templateEngine.convert(configuration.getToReplacement()));
 
                     // Prepare next iteration
                     start = matcher.end();
                     result = matcher.find();
                 } while (result);
 
-                sb.append(value.substring(start, value.length()));
+                sb.append(value.substring(start));
             } else {
                 sb.append(value);
             }
@@ -164,14 +145,19 @@ public class URLRewritingPolicy {
         return sb.toString();
     }
 
-    private Set<String> getNamedGroupCandidates(String regex) {
-        Set<String> namedGroups = new TreeSet<>();
-        Matcher m = GROUP_NAME_PATTERN.matcher(regex);
-
-        while (m.find()) {
-            namedGroups.add(m.group(1));
+    public Pattern getFromRegexPattern() {
+        if (fromRegexPattern == null) {
+            this.fromRegexPattern = Pattern.compile(configuration.getFromRegex());
         }
 
-        return namedGroups;
+        return fromRegexPattern;
+    }
+
+    public Set<String> getExtractedGroupNames() {
+        if (extractedGroupNames == null) {
+            this.extractedGroupNames = getNamedGroupCandidates(getFromRegexPattern().pattern());
+        }
+
+        return extractedGroupNames;
     }
 }
