@@ -29,9 +29,7 @@ import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.api.annotations.OnResponse;
 import io.gravitee.policy.api.annotations.OnResponseContent;
 import io.gravitee.policy.urlrewriting.configuration.URLRewritingPolicyConfiguration;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -83,7 +81,15 @@ public class URLRewritingPolicy {
     private void rewriteHeaders(HttpHeaders headers, ExecutionContext executionContext) {
         LOGGER.debug("Rewrite HTTP response headers");
 
-        headers.names().forEach(header -> headers.set(header, rewrite(headers.get(header), executionContext)));
+        Set<String> names = new HashSet<>(headers.names());
+        names.forEach(headerName -> {
+            List<String> headerValues = headers.getAll(headerName);
+            headers.remove(headerName);
+            headerValues.forEach(headerValue -> {
+                String rewrittenHeaderValue = rewrite(headerValue, executionContext);
+                headers.add(headerName, rewrittenHeaderValue);
+            });
+        });
     }
 
     @OnResponseContent
