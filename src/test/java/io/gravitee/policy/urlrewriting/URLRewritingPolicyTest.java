@@ -28,6 +28,7 @@ import io.gravitee.gateway.api.http.HttpHeaders;
 import io.gravitee.gateway.api.stream.ReadWriteStream;
 import io.gravitee.policy.api.PolicyChain;
 import io.gravitee.policy.urlrewriting.configuration.URLRewritingPolicyConfiguration;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -96,6 +97,34 @@ public class URLRewritingPolicyTest {
 
         // Check results
         Assert.assertEquals("https://apis.gravitee.io/mypath", response.headers().get(HttpHeaderNames.LOCATION));
+        verify(policyChain).doNext(any(Request.class), any(Response.class));
+    }
+
+    @Test
+    public void test_rewriteHeadersWithMultipleValues() {
+        // Prepare
+        final HttpHeaders headers = HttpHeaders
+            .create()
+            .add(HttpHeaderNames.SET_COOKIE, "SID=ABAN12398123NJHJZEHDK123012039301U93274923U4KADNZKN; Path=/test")
+            .add(HttpHeaderNames.SET_COOKIE, "JSESSIONID=123456789; Path=/test");
+
+        when(response.headers()).thenReturn(headers);
+
+        when(configuration.isRewriteResponseHeaders()).thenReturn(true);
+        when(configuration.getFromRegex()).thenReturn("Path=/test");
+        when(configuration.getToReplacement()).thenReturn("Path=/updated-path");
+
+        when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
+
+        urlRewritingPolicy.onResponse(request, response, executionContext, policyChain);
+
+        Assert.assertEquals(
+            List.of(
+                "SID=ABAN12398123NJHJZEHDK123012039301U93274923U4KADNZKN; Path=/updated-path",
+                "JSESSIONID=123456789; Path=/updated-path"
+            ),
+            response.headers().getAll(HttpHeaderNames.SET_COOKIE)
+        );
         verify(policyChain).doNext(any(Request.class), any(Response.class));
     }
 
