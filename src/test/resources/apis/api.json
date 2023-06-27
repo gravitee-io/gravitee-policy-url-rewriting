@@ -34,8 +34,8 @@
                     "configuration": {
                         "rewriteResponseHeaders": true,
                         "rewriteResponseBody": true,
-                        "fromRegex": "https?://[^/]*/((\\w*|/*))",
-                        "toReplacement": "https://apis.gravitee.io/{#group[1]}"
+                        "fromRegex": "https?://[^\\/]*\\/((?>\\w|\\d|\\-|\\/|\\?|\\=|\\&)*)",
+                        "toReplacement": "https://apis.gravitee.io/{#group[0]}"
                     }
                 }
             ]
