@@ -1,3 +1,10 @@
+## [1.5.2](https://github.com/gravitee-io/gravitee-policy-url-rewriting/compare/1.5.1...1.5.2) (2023-06-27)
+
+
+### Bug Fixes
+
+* update regex from documentation to handle single-line body with multiple URLs ([f3a9795](https://github.com/gravitee-io/gravitee-policy-url-rewriting/commit/f3a9795f631dc62e717422e82b106252410137d8))
+
 ## [1.5.1](https://github.com/gravitee-io/gravitee-policy-url-rewriting/compare/1.5.0...1.5.1) (2023-06-27)
 
 
