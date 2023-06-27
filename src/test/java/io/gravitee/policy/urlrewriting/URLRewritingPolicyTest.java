@@ -55,62 +55,52 @@ public class URLRewritingPolicyTest {
     @Mock
     private ExecutionContext executionContext;
 
-    @Mock
     private URLRewritingPolicyConfiguration configuration;
 
-    @Before
-    public void init() {
+    public void initPolicy(String fromRegex, String toReplacement, boolean rewriteResponseBody, boolean rewriteResponseHeaders) {
+        configuration = new URLRewritingPolicyConfiguration();
+        configuration.setFromRegex(fromRegex);
+        configuration.setToReplacement(toReplacement);
+        configuration.setRewriteResponseBody(rewriteResponseBody);
+        configuration.setRewriteResponseHeaders(rewriteResponseHeaders);
         urlRewritingPolicy = new URLRewritingPolicy(configuration);
     }
 
     @Test
     public void test_shouldNotRewriteHeaders() {
-        // Prepare
-        when(configuration.isRewriteResponseHeaders()).thenReturn(false);
+        initPolicy("", "", false, false);
 
-        // Execute policy
         urlRewritingPolicy.onResponse(request, response, executionContext, policyChain);
 
-        // Check results
         verify(response, never()).headers();
         verify(policyChain).doNext(any(Request.class), any(Response.class));
     }
 
     @Test
     public void test_rewriteHeaders() {
-        // Prepare
-        final HttpHeaders headers = HttpHeaders.create().set(HttpHeaderNames.LOCATION, "https://localgateway/mypath");
+        initPolicy("https?://[^\\/]*\\/((.*|\\/*))", "https://apis.gravitee.io/{#group[1]}", false, true);
 
+        final HttpHeaders headers = HttpHeaders.create().set(HttpHeaderNames.LOCATION, "https://localgateway/mypath");
         when(response.headers()).thenReturn(headers);
 
-        when(configuration.isRewriteResponseHeaders()).thenReturn(true);
-        when(configuration.getFromRegex()).thenReturn("https?://[^\\/]*\\/((.*|\\/*))");
-        when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
-
-        // Prepare context
         when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
 
-        // Execute policy
         urlRewritingPolicy.onResponse(request, response, executionContext, policyChain);
 
-        // Check results
         Assert.assertEquals("https://apis.gravitee.io/mypath", response.headers().get(HttpHeaderNames.LOCATION));
         verify(policyChain).doNext(any(Request.class), any(Response.class));
     }
 
     @Test
     public void test_rewriteHeadersWithMultipleValues() {
-        // Prepare
+        initPolicy("Path=/test", "Path=/updated-path", false, true);
+
         final HttpHeaders headers = HttpHeaders
             .create()
             .add(HttpHeaderNames.SET_COOKIE, "SID=ABAN12398123NJHJZEHDK123012039301U93274923U4KADNZKN; Path=/test")
             .add(HttpHeaderNames.SET_COOKIE, "JSESSIONID=123456789; Path=/test");
 
         when(response.headers()).thenReturn(headers);
-
-        when(configuration.isRewriteResponseHeaders()).thenReturn(true);
-        when(configuration.getFromRegex()).thenReturn("Path=/test");
-        when(configuration.getToReplacement()).thenReturn("Path=/updated-path");
 
         when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
 
@@ -128,26 +118,20 @@ public class URLRewritingPolicyTest {
 
     @Test
     public void test_rewriteResponse_disabled() {
-        // Prepare
-        when(configuration.isRewriteResponseBody()).thenReturn(false);
+        initPolicy("", "", false, false);
 
-        // Execute policy
         ReadWriteStream stream = urlRewritingPolicy.onResponseContent(request, response, executionContext);
 
-        // Check results
         Assert.assertNull(stream);
     }
 
     @Test
     public void shouldRewriteEmptyBody() {
-        // Prepare
-        when(configuration.isRewriteResponseBody()).thenReturn(true);
+        initPolicy("", "", true, false);
 
-        // Execute policy
         final ReadWriteStream stream = urlRewritingPolicy.onResponseContent(request, response, executionContext);
         stream.end();
 
-        // Check results
         Assert.assertNotNull(stream);
     }
 }

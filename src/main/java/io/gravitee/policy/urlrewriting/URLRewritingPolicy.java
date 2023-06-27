@@ -58,10 +58,12 @@ public class URLRewritingPolicy {
     private static final String GROUP_ATTRIBUTE = "group";
     private static final String GROUP_NAME_ATTRIBUTE = "groupName";
 
-    private URLRewritingPolicyConfiguration configuration;
+    private final URLRewritingPolicyConfiguration configuration;
+    private final Pattern configuredURLPattern;
 
     public URLRewritingPolicy(final URLRewritingPolicyConfiguration configuration) {
         this.configuration = configuration;
+        this.configuredURLPattern = Pattern.compile(configuration.getFromRegex());
     }
 
     @OnResponse
@@ -127,10 +129,9 @@ public class URLRewritingPolicy {
 
         if (value != null && !value.isEmpty()) {
             // Compile pattern
-            Pattern pattern = Pattern.compile(configuration.getFromRegex());
 
             // Apply regex capture / replacement
-            Matcher matcher = pattern.matcher(value);
+            Matcher matcher = this.configuredURLPattern.matcher(value);
             int start = 0;
 
             boolean result = matcher.find();
@@ -147,7 +148,7 @@ public class URLRewritingPolicy {
                     executionContext.getTemplateEngine().getTemplateContext().setVariable(GROUP_ATTRIBUTE, groups);
 
                     // Extract capture group by name
-                    Set<String> extractedGroupNames = getNamedGroupCandidates(pattern.pattern());
+                    Set<String> extractedGroupNames = getNamedGroupCandidates(this.configuredURLPattern.pattern());
                     Map<String, String> groupNames = extractedGroupNames
                         .stream()
                         .collect(Collectors.toMap(groupName -> groupName, matcher::group));
