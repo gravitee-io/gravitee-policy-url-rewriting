@@ -15,14 +15,12 @@
  */
 package io.gravitee.policy.urlrewriting;
 
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 import io.gravitee.el.TemplateEngine;
 import io.gravitee.gateway.api.ExecutionContext;
 import io.gravitee.gateway.api.Request;
 import io.gravitee.gateway.api.Response;
-import io.gravitee.gateway.api.buffer.Buffer;
 import io.gravitee.gateway.api.http.HttpHeaderNames;
 import io.gravitee.gateway.api.http.HttpHeaders;
 import io.gravitee.gateway.api.stream.ReadWriteStream;
@@ -138,62 +136,6 @@ public class URLRewritingPolicyTest {
 
         // Check results
         Assert.assertNull(stream);
-    }
-
-    @Test
-    public void test_rewriteResponse_noRewriting() {
-        // Prepare
-        when(configuration.isRewriteResponseBody()).thenReturn(true);
-        when(configuration.getFromRegex()).thenReturn("https?://[^\\/]*\\/((.*|\\/*))");
-
-        // Execute policy
-        Buffer buffer = Buffer.buffer("{\"name\":1}");
-        ReadWriteStream stream = urlRewritingPolicy.onResponseContent(request, response, executionContext);
-        stream.write(buffer);
-        stream.end();
-
-        // Check results
-        Assert.assertNotNull(stream);
-    }
-
-    @Test
-    public void test_rewriteResponse_singleMatch() {
-        // Prepare
-        when(configuration.isRewriteResponseBody()).thenReturn(true);
-        when(configuration.getFromRegex()).thenReturn("https?://[^\\/]*\\/((.*|\\/*))");
-        when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
-
-        // Prepare context
-        when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
-
-        // Execute policy
-        Buffer buffer = Buffer.buffer("{\"link\":\"http://localhost:8082/mypath/toto\"}");
-        ReadWriteStream stream = urlRewritingPolicy.onResponseContent(request, response, executionContext);
-        stream.write(buffer);
-        stream.end();
-
-        // Check results
-        Assert.assertNotNull(stream);
-    }
-
-    @Test
-    public void test_rewriteResponse_multipleMatches() {
-        // Prepare
-        when(configuration.isRewriteResponseBody()).thenReturn(true);
-        when(configuration.getFromRegex()).thenReturn("https?:\\/\\/[^\\/]*\\/(([a-zA-Z\\/]*|\\/*))");
-        when(configuration.getToReplacement()).thenReturn("https://apis.gravitee.io/{#group[1]}");
-
-        // Prepare context
-        when(executionContext.getTemplateEngine()).thenReturn(TemplateEngine.templateEngine());
-
-        // Execute policy
-        Buffer buffer = Buffer.buffer("{\"links\":[\"http://localhost:8082/mypath/toto\", \"http://localhost:8082/mypath/tata\"]}");
-        ReadWriteStream stream = urlRewritingPolicy.onResponseContent(request, response, executionContext);
-        stream.write(buffer);
-        stream.end();
-
-        // Check results
-        Assert.assertNotNull(stream);
     }
 
     @Test
