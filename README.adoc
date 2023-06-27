@@ -62,7 +62,7 @@ You can use the `url-rewriting` policy to rewrite URLs from an HTTP response hea
 "url-rewriting": {
     "rewriteResponseHeaders": true,
     "rewriteResponseBody": true,
-    "fromRegex": "https?://[^\/]*\/((.*|\/*))",
+    "fromRegex": "https?://[^\/]*\/((\w*|\/*))",
     "toReplacement": "https://apis.gravitee.io/{#group[1]}"
 }
 ----
