@@ -121,6 +121,10 @@ class URLRewritingPolicyIntegrationTest extends AbstractPolicyTest<URLRewritingP
                 "{ \"aUrl\": \"https://apis.gravitee.io/body\", \n \"a2ndUrl\": \"https://apis.gravitee.io/body2\" }"
             ),
             Arguments.of(
+                "{ \"aUrl\": \"http://test.com/body/some-path?param1=1&param2=test\", \"a2ndUrl\": \"http://test.com/body2\" }",
+                "{ \"aUrl\": \"https://apis.gravitee.io/body/some-path?param1=1&param2=test\", \"a2ndUrl\": \"https://apis.gravitee.io/body2\" }"
+            ),
+            Arguments.of(
                 "{ \"aUrl\": \"http://test.com/body\", \n \"a2ndUrl\": \"http://test.com/body2\", \"a3rdUrl\": \"http://test.com/body3\", \"anotherValue\": \"test\" }",
                 "{ \"aUrl\": \"https://apis.gravitee.io/body\", \n \"a2ndUrl\": \"https://apis.gravitee.io/body2\", \"a3rdUrl\": \"https://apis.gravitee.io/body3\", \"anotherValue\": \"test\" }"
             )
