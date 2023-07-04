@@ -1,6 +1,7 @@
 {
-  "type" : "object",
-  "id" : "urn:jsonschema:io:gravitee:policy:urlrewriting:configuration:URLRewritingPolicyConfiguration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
   "properties" : {
     "rewriteResponseHeaders" : {
       "title": "Rewrite HTTP response headers",
@@ -21,7 +22,7 @@
     },
     "toReplacement" : {
       "title": "Replacement value",
-      "description": "The value used to replace matching URLs (support EL).",
+      "description": "The value used to replace matching URLs. (support EL)",
       "type" : "string",
       "x-schema-form": {
         "expression-language": true
