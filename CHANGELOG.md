@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/gravitee-io/gravitee-policy-url-rewriting/compare/1.5.2...1.6.0) (2023-07-05)
+
+
+### Features
+
+* addition of the execution phase ([6531f82](https://github.com/gravitee-io/gravitee-policy-url-rewriting/commit/6531f822aee77c09882fab604f55c046de4f27d2))
+
 ## [1.5.2](https://github.com/gravitee-io/gravitee-policy-url-rewriting/compare/1.5.1...1.5.2) (2023-06-27)
 
 
