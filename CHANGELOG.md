@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/gravitee-io/gravitee-policy-url-rewriting/compare/1.6.0...1.6.1) (2023-07-20)
+
+
+### Bug Fixes
+
+* update policy description ([d2e15c2](https://github.com/gravitee-io/gravitee-policy-url-rewriting/commit/d2e15c2a6771340ab8d27e965552df4659175916))
+
 # [1.6.0](https://github.com/gravitee-io/gravitee-policy-url-rewriting/compare/1.5.2...1.6.0) (2023-07-05)
 
 
