@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/gravitee-io/gravitee-policy-url-rewriting/compare/1.6.1...1.7.0) (2023-12-19)
+
+
+### Features
+
+* enable policy on REQUEST phase for message APIs ([fe40c1f](https://github.com/gravitee-io/gravitee-policy-url-rewriting/commit/fe40c1fd2603ccdf88d3e3e6c213a72bb7c2604b)), closes [gravitee-io/issues#9430](https://github.com/gravitee-io/issues/issues/9430)
+
 ## [1.6.1](https://github.com/gravitee-io/gravitee-policy-url-rewriting/compare/1.6.0...1.6.1) (2023-07-20)
 
 
