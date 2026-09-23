@@ -95,8 +95,7 @@ public class URLRewritingPolicyTest {
     public void test_rewriteHeadersWithMultipleValues() {
         initPolicy("Path=/test", "Path=/updated-path", false, true);
 
-        final HttpHeaders headers = HttpHeaders
-            .create()
+        final HttpHeaders headers = HttpHeaders.create()
             .add(HttpHeaderNames.SET_COOKIE, "SID=ABAN12398123NJHJZEHDK123012039301U93274923U4KADNZKN; Path=/test")
             .add(HttpHeaderNames.SET_COOKIE, "JSESSIONID=123456789; Path=/test");
 
