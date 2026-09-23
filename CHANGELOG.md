@@ -1,3 +1,16 @@
+# [2.0.0](https://github.com/gravitee-io/gravitee-policy-url-rewriting/compare/1.7.0...2.0.0) (2026-09-23)
+
+
+* chore(deps)!: move to the gravitee orb 5 and parent 23 ([fb73316](https://github.com/gravitee-io/gravitee-policy-url-rewriting/commit/fb7331695248316ed57744e8dc38d6d552b87be9))
+
+
+### BREAKING CHANGES
+
+* the artifact is now compiled for Java 21, up from Java 11, and
+requires a Java 21 runtime or later.
+
+https://gravitee.atlassian.net/browse/BX-403
+
 # [1.7.0](https://github.com/gravitee-io/gravitee-policy-url-rewriting/compare/1.6.1...1.7.0) (2023-12-19)
 
 
