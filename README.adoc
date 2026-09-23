@@ -24,11 +24,14 @@ endif::[]
 
 You can use the `url-rewriting` policy to rewrite URLs from an HTTP response header or response body.
 
-== Compatibility with APIM
+== Compatibility matrix
 
 |===
-| Plugin version | APIM version
-| 1.x            | All supported versions
+| Plugin version | APIM             | Java version
+
+| 2.x            | 4.7.x to latest  | 21
+| 1.5.1 to 1.7.x | 3.18.x to latest | 11
+| 1.0.x to 1.5.0 | 3.x              | 8
 |===
 
 
