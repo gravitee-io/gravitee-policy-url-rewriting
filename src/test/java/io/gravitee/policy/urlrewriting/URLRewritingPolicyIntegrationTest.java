@@ -56,15 +56,14 @@ class URLRewritingPolicyIntegrationTest extends AbstractPolicyTest<URLRewritingP
     @DeployApi("/apis/api.json")
     void should_rewrite_headers(WebClient client) {
         wiremock.stubFor(
-            post("/team")
-                .willReturn(
-                    ok("{ \"aUrl\": \"http://test.com/body\" }")
-                        .withHeader(
-                            HttpHeaderNames.SET_COOKIE,
-                            "SID=ABAN12398123NJHJZEHDK123012039301U93274923U4KADNZKN; Path=http://test.com/header1"
-                        )
-                        .withHeader(HttpHeaderNames.SET_COOKIE, "JSESSIONID=123456789; Path=https://test.com/header2")
-                )
+            post("/team").willReturn(
+                ok("{ \"aUrl\": \"http://test.com/body\" }")
+                    .withHeader(
+                        HttpHeaderNames.SET_COOKIE,
+                        "SID=ABAN12398123NJHJZEHDK123012039301U93274923U4KADNZKN; Path=http://test.com/header1"
+                    )
+                    .withHeader(HttpHeaderNames.SET_COOKIE, "JSESSIONID=123456789; Path=https://test.com/header2")
+            )
         );
 
         client
@@ -74,13 +73,12 @@ class URLRewritingPolicyIntegrationTest extends AbstractPolicyTest<URLRewritingP
             .awaitDone(5, TimeUnit.SECONDS)
             .assertValue(response -> {
                 assertThat(response.statusCode()).isEqualTo(200);
-                assertThat(response.headers().getAll(HttpHeaderNames.SET_COOKIE))
-                    .isEqualTo(
-                        List.of(
-                            "SID=ABAN12398123NJHJZEHDK123012039301U93274923U4KADNZKN; Path=https://apis.gravitee.io/header1",
-                            "JSESSIONID=123456789; Path=https://apis.gravitee.io/header2"
-                        )
-                    );
+                assertThat(response.headers().getAll(HttpHeaderNames.SET_COOKIE)).isEqualTo(
+                    List.of(
+                        "SID=ABAN12398123NJHJZEHDK123012039301U93274923U4KADNZKN; Path=https://apis.gravitee.io/header1",
+                        "JSESSIONID=123456789; Path=https://apis.gravitee.io/header2"
+                    )
+                );
                 return true;
             })
             .assertComplete()
